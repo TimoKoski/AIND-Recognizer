@@ -21,5 +21,29 @@ def recognize(models: dict, test_set: SinglesData):
     probabilities = []
     guesses = []
     # TODO implement the recognizer
-    # return probabilities, guesses
-    raise NotImplementedError
+    # Valuable insight from 
+    # https://discussions.udacity.com/t/recognizer-implementation/234793
+    # https://discussions.udacity.com/t/recognizer-implementation/234793/27
+    
+    test_sequences = list(test_set.get_all_Xlengths().values())
+    for test_X, test_Xlength in test_sequences:
+        prob = {}
+        score = float('-inf')
+        best_score = float('-inf')
+        guess = ""
+        for model_word, model in models.items():
+            try:
+                score = model.score(test_X, test_lengths)
+                prob[model_word] = score
+            except:
+                prob[model_word] = float('-inf')
+            if score > best_score:
+                guess = model_word
+                best_score = score    
+            
+        probabilities.append(prob)
+        #print(probabilities)
+        guesses.append(guess)
+        
+    return probabilities, guesses
+    #raise NotImplementedError

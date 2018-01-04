@@ -6,6 +6,8 @@ import numpy as np
 from hmmlearn.hmm import GaussianHMM
 from sklearn.model_selection import KFold
 from asl_utils import combine_sequences
+#from test.test_bufio import lengths
+#from numba.types import none
 
 
 class ModelSelector(object):
@@ -76,8 +78,33 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        # TODO implement model selection based on BIC scores 
+        # Additional ideas from 
+        # https://discussions.udacity.com/t/how-to-start-coding-the-selectors/476905/7   
+        # https://discussions.udacity.com/t/verify-results-cv-bic-dic/247347/13
+        # https://discussions.udacity.com/t/bic-failing-for-some-words-and-not-other/329847     
+        
+        best_bic_score = float('inf') # initializing bic
+        best_hmm_model = None # initializing model
+        #best_n = 0
+        for n in range(self.min_n_components, self.max_n_components + 1):   
+            try:        
+                hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)                
+                
+                log_l = hmm_model.score(self.X, self.lengths)
+                param = (n * n) + (2 * n * len(self.X[0])) - 1              
+                bic_score = (-2 * log_l) + (param * np.log(len(self.X)))
+                
+                if bic_score < best_bic_score:
+                    best_bic_score = bic_score
+                    best_hmm_model = hmm_model
+                    #best_n = n
+            except:
+                pass
+        #return self.base_model(best_n) 
+        return best_hmm_model
+        
+        #raise NotImplementedError
 
 
 class SelectorDIC(ModelSelector):
@@ -94,7 +121,36 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        # Further ideas from
+        # https://discussions.udacity.com/t/selectorbic-and-selectordic-errors/304157
+        
+        best_dic_score = float('-inf')
+        best_hmm_model = None
+        #best_n = 0
+        for n in range(self.min_n_components, self.max_n_components + 1):   
+            try:        
+                hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)                
+                
+                log_l = hmm_model.score(self.X, self.lengths)
+                # list comprehension implementation as suggested in
+                log_ls_others = 0
+                #log_ls_others = [hmm_model.score(X, lengths) for (X, lengths) in self.hwords]
+                for word in self.hwords:
+                    X, lengths = self.hwords[word]                    
+                    log_ls_others += hmm_model.score(X, lengths)
+                
+                avg_log_l_others = ((log_ls_others)-log_l) / (len(self.hwords)-1)
+                dic_score = log_l - avg_log_l_others
+                
+                if dic_score > best_dic_score:
+                    best_dic_score = dic_score
+                    best_hmm_model = hmm_model
+                    #best_n = n
+            except:
+                pass
+        #return self.base_model(best_n) 
+        return best_hmm_model
+        #raise NotImplementedError
 
 
 class SelectorCV(ModelSelector):
@@ -106,4 +162,50 @@ class SelectorCV(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+        # Further ideas from
+        # https://discussions.udacity.com/t/implement-selectorcv/247078/6
+        # https://discussions.udacity.com/t/issue-with-selectorcv/299868/5
+        # https://discussions.udacity.com/t/selectorcv-fails-with-indexerror-list-index-out-of-range/397820
+        # https://discussions.udacity.com/t/implement-selectorcv/247078/23
+        
+        split_method = KFold(n_splits=min(3, len(self.sequences)))
+        best_avg_log_l = float('-inf')
+        previous_score = float('-inf')
+        #best_n = 3
+        hmm_model = None
+        for n in range(self.min_n_components, self.max_n_components + 1):   
+            try:
+                folds = 0
+                total_log_l = 0
+                #ERRORHANDLING       
+                if len(self.lengths) == 1:
+                    hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)
+                    score = hmm_model.score(self.X, self.lengths)
+                    if score > previous_score:
+                        best_n =  n
+                #ERRORHANDLING ENDS        
+                #best_hmm_model = None
+                else: #ELSE AS PART OF ERRORHANDLING
+                    for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                        folds += 1 # add to folds count
+                        # Initializing train and test sets
+                        x_train, lengths_train = combine_sequences(cv_train_idx, self.sequences)
+                        x_test, lengths_test = combine_sequences(cv_test_idx, self.sequences)                    
+                        # Train the model with training set 
+                        hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(x_train, lengths_train)                
+                        # Test the model with test set
+                        log_l = hmm_model.score(x_test, lengths_test)
+                        # add to the total score for the folds
+                        total_log_l += log_l
+                    # calculate the average after the loop    
+                    avg_log_l = total_log_l / folds
+                    # comparison to current best    
+                    if best_avg_log_l < avg_log_l:
+                        best_avg_log_l = avg_log_l
+                        #best_hmm_model = hmm_model
+                        best_n = n
+            except:
+                pass
+        return self.base_model(best_n) 
+        #return GaussianHMM(n_components=best_n, n_iter=1000).fit(self.X, self.lengths)
+        #raise NotImplementedError

@@ -122,3 +122,13 @@ $RECYCLE.BIN/
 
 # KDE directory preferences
 .directory
+
+
+# TK: few additions to ignore
+.project
+.pydevproject
+cargo_planning-*
+*.pdf
+heuristic*
+research*
+test_result*
