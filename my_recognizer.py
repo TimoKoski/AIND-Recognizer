@@ -25,24 +25,28 @@ def recognize(models: dict, test_set: SinglesData):
     # https://discussions.udacity.com/t/recognizer-implementation/234793
     # https://discussions.udacity.com/t/recognizer-implementation/234793/27
     
+    # creating test sequences from singlesdata
     test_sequences = list(test_set.get_all_Xlengths().values())
     for test_X, test_Xlength in test_sequences:
+        # initializing variables
         prob = {}
         score = float('-inf')
         best_score = float('-inf')
         guess = ""
+        # looping through every word and associated model
         for model_word, model in models.items():
             try:
                 score = model.score(test_X, test_Xlength)
                 prob[model_word] = score
             except:
-                prob[model_word] = float('-inf')
+                prob[model_word] = float('-inf') # exception handling as suggested by forum mods
+            # keeping track of the most probable guess
             if score > best_score:
                 guess = model_word
                 best_score = score    
-            
+        
+        # appending both lists
         probabilities.append(prob)
-        #print(probabilities)
         guesses.append(guess)
         
     return probabilities, guesses

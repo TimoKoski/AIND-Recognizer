@@ -90,11 +90,13 @@ class SelectorBIC(ModelSelector):
         for n in range(self.min_n_components, self.max_n_components + 1):   
             try:        
                 hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)                
-                
+                # calculating log_l for the model 
                 log_l = hmm_model.score(self.X, self.lengths)
-                param = (n * n) + (2 * n * len(self.X[0])) - 1              
+                # determining the number of parameters
+                param = (n * n) + (2 * n * len(self.X[0])) - 1
+                # calculating the bic_score              
                 bic_score = (-2 * log_l) + (param * np.log(len(self.X)))
-                
+                # storing values and updating if current bic_score is less than previous best
                 if bic_score < best_bic_score:
                     best_bic_score = bic_score
                     best_hmm_model = hmm_model
@@ -124,24 +126,26 @@ class SelectorDIC(ModelSelector):
         # Further ideas from
         # https://discussions.udacity.com/t/selectorbic-and-selectordic-errors/304157
         
+        # initializing variables
         best_dic_score = float('-inf')
         best_hmm_model = None
         #best_n = 0
         for n in range(self.min_n_components, self.max_n_components + 1):   
             try:        
                 hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)                
-                
+                # log_l of the current word
                 log_l = hmm_model.score(self.X, self.lengths)
-                # list comprehension implementation as suggested in
+                # initializing the variable log_ls_others to accumulate log_l of other words in there
                 log_ls_others = 0
-                #log_ls_others = [hmm_model.score(X, lengths) for (X, lengths) in self.hwords]
+                
                 for word in self.hwords:
                     X, lengths = self.hwords[word]                    
                     log_ls_others += hmm_model.score(X, lengths)
-                
+                # calculating the average log_l for other other words (subtracting log_l of the current word)
                 avg_log_l_others = ((log_ls_others)-log_l) / (len(self.hwords)-1)
+                # calculating the dic_score
                 dic_score = log_l - avg_log_l_others
-                
+                # storing values, and updating if current dic_score higher than previous best
                 if dic_score > best_dic_score:
                     best_dic_score = dic_score
                     best_hmm_model = hmm_model
@@ -177,15 +181,14 @@ class SelectorCV(ModelSelector):
             try:
                 folds = 0
                 total_log_l = 0
-                #ERRORHANDLING       
+                # handling case len(self.lenghts) == 1 on its own, as suggested by forum mods       
                 if len(self.lengths) == 1:
                     hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)
                     score = hmm_model.score(self.X, self.lengths)
                     if score > previous_score:
                         best_n =  n
-                #ERRORHANDLING ENDS        
-                #best_hmm_model = None
-                else: #ELSE AS PART OF ERRORHANDLING
+
+                else: # end of case len(self.lenghts) == 1
                     for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
                         folds += 1 # add to folds count
                         # Initializing train and test sets
@@ -206,6 +209,6 @@ class SelectorCV(ModelSelector):
                         best_n = n
             except:
                 pass
-        return self.base_model(best_n) 
+        return self.base_model(best_n) # return FULL model [not any of those trained with folded sets]
         #return GaussianHMM(n_components=best_n, n_iter=1000).fit(self.X, self.lengths)
         #raise NotImplementedError
