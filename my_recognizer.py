@@ -33,7 +33,7 @@ def recognize(models: dict, test_set: SinglesData):
         guess = ""
         for model_word, model in models.items():
             try:
-                score = model.score(test_X, test_lengths)
+                score = model.score(test_X, test_Xlength)
                 prob[model_word] = score
             except:
                 prob[model_word] = float('-inf')
