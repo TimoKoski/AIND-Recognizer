@@ -127,7 +127,7 @@ $RECYCLE.BIN/
 # TK: few additions to ignore
 .project
 .pydevproject
-cargo_planning-*
+aind-recognizer-sub*
 *.pdf
 heuristic*
 research*
