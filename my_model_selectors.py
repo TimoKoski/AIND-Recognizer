@@ -172,20 +172,20 @@ class SelectorCV(ModelSelector):
         # https://discussions.udacity.com/t/selectorcv-fails-with-indexerror-list-index-out-of-range/397820
         # https://discussions.udacity.com/t/implement-selectorcv/247078/23
         
-        split_method = KFold(n_splits=min(3, len(self.sequences)))
+        split_method = KFold(n_splits=3) # KFold(n_splits=min(3, len(self.sequences)))
         best_avg_log_l = float('-inf')
         previous_score = float('-inf')
-        #best_n = 3
+        best_n = 3 # initializing 
         hmm_model = None
         for n in range(self.min_n_components, self.max_n_components + 1):   
             try:
                 folds = 0
                 total_log_l = 0
-                # handling case len(self.lenghts) == 1 on its own, as suggested by forum mods       
-                if len(self.lengths) == 1:
+                # handling case len(self.lenghts) < 2 on its own, as suggested by forum mods       
+                if len(self.sequences) < 2:
                     hmm_model = GaussianHMM(n_components=n, n_iter=1000).fit(self.X, self.lengths)
                     score = hmm_model.score(self.X, self.lengths)
-                    if score > previous_score:
+                    if previous_score < score:
                         best_n =  n
 
                 else: # end of case len(self.lenghts) == 1
